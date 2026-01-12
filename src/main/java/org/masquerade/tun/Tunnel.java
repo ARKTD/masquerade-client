@@ -2,20 +2,15 @@ package org.masquerade.tun;
 
 import org.masquerade.utils.Logger;
 
-public abstract class TunConnection {
-    static Logger logger = new Logger(TunConnection.class);
+public abstract class Tunnel {
+    static Logger logger = new Logger(Tunnel.class);
 
     public String adapterName;
 
-    public TunConnection(String adapterName){
+    public Tunnel(String adapterName){
         this.adapterName = adapterName;
     }
 
-    public void init(){
-
-    }
-
-    public void close(){
-
-    }
+    abstract public void init();
+    abstract public void close();
 }

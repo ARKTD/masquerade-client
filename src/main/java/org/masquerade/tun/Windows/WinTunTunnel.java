@@ -3,7 +3,7 @@ package org.masquerade.tun.Windows;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import com.sun.jna.WString;
-import org.masquerade.tun.TunAdapter;
+import org.masquerade.tun.Tunnel;
 import org.masquerade.utils.Logger;
 
 import java.io.File;
@@ -11,8 +11,8 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 
-public class WinTunAdapter extends TunAdapter {
-    static Logger logger = new Logger(WinTunAdapter.class);
+public class WinTunTunnel extends Tunnel {
+    static Logger logger = new Logger(WinTunTunnel.class);
     private static boolean fetch_attempt = false;
 
     private Pointer adapter;
@@ -21,7 +21,7 @@ public class WinTunAdapter extends TunAdapter {
     // WinTun settings
     private static final int RING_CAPACITY = 0x4000000;
 
-    public WinTunAdapter(String adapterName) {
+    public WinTunTunnel(String adapterName) {
         super(adapterName);
         init();
     }
@@ -32,7 +32,7 @@ public class WinTunAdapter extends TunAdapter {
         obtainAdapter();
     }
 
-    public boolean obtainAdapter(){
+    public void obtainAdapter(){
         try {
             if(!fetch_attempt) {
                 fetchDLL();
@@ -46,139 +46,39 @@ public class WinTunAdapter extends TunAdapter {
 
                 adapter = WinTun.INSTANCE.WintunCreateAdapter(
                         new WString(adapterName),
-                        new WString("Wintun"),
+                        new WString("VPN Connection"),
                         null);
             }
 
             if (adapter == null) {
                 int error = Native.getLastError();
-                logger.error("Failed to create/open adapter.", error);
-                return false;
+                logger.error("Failed to obtain adapter.", error);
+                return;
             }
 
-            // Start session
+            // Start connection session
             session = WinTun.INSTANCE.WintunStartSession(adapter, RING_CAPACITY);
             if (session == null) {
                 int error = Native.getLastError();
-                log.error("Failed to start session. Error code: {}", error);
+                logger.error("Failed to start a session.", error);
                 WinTun.INSTANCE.WintunCloseAdapter(adapter);
-                return false;
+                return;
             }
-
-            open = true;
-            int version = WinTun.INSTANCE.WintunGetRunningDriverVersion();
-            log.info("WinTun opened (driver version: 0x{})", Integer.toHexString(version));
-
-            // Configure IP and routing
-            configureAdapter();
-
-            return true;
-
         } catch (UnsatisfiedLinkError e) {
-            log.error("WinTun library not found! Download wintun.dll from https://www.wintun.net/");
-            return false;
+            logger.error("WinTun library was not found!", e);
         } catch (Exception e) {
-            log.error("Failed to open WinTun", e);
-            return false;
+            logger.error("An error was encountered while obtaining adapter", e);
         }
     }
 
     public void close(){
-        // Nothing to close here for now
+        if (session != null) {
+            WinTun.INSTANCE.WintunEndSession(session);
+        }
+        if (adapter != null) {
+            WinTun.INSTANCE.WintunCloseAdapter(adapter);
+        }
     }
-
-    /*
-
-        @Override
-        public byte[] readPacket() {
-            if (!open) return null;
-
-            try {
-                IntByReference size = new IntByReference();
-                Pointer packet = WinTun.INSTANCE.WintunReceivePacket(session, size);
-
-                if (packet == null) {
-                    return null;
-                }
-
-                int len = size.getValue();
-                byte[] data = packet.getByteArray(0, len);
-                WinTun.INSTANCE.WintunReleaseReceivePacket(session, packet);
-
-                return data;
-
-            } catch (Exception e) {
-                if (open) {
-                    log.error("Error reading packet", e);
-                }
-                return null;
-            }
-        }
-
-        @Override
-        public void close() {
-            if (!open) return;
-            open = false;
-
-            if (session != null) {
-                WinTun.INSTANCE.WintunEndSession(session);
-            }
-            if (adapter != null) {
-                WinTun.INSTANCE.WintunCloseAdapter(adapter);
-            }
-
-            log.info("WinTun closed");
-        }
-
-        private void configureAdapter() {
-            try {
-                log.info("Configuring adapter IP and routing...");
-
-                // Set IP address on the adapter (10.8.0.1/24)
-                ProcessBuilder pb1 = new ProcessBuilder(
-                        "netsh", "interface", "ip", "set", "address",
-                        "name=\"" + adapterName + "\"",
-                        "source=static",
-                        "addr=10.8.0.1",
-                        "mask=255.255.255.0"
-                );
-                Process p1 = pb1.start();
-                int exit1 = p1.waitFor();
-
-                if (exit1 == 0) {
-                    log.info("✓ IP address configured: 10.8.0.1/24");
-                } else {
-                    log.warn("Failed to set IP address (exit code: {})", exit1);
-                }
-
-                // Add route for all traffic (0.0.0.0/0) through TUN adapter
-                // This makes all internet traffic go through our VPN
-                ProcessBuilder pb2 = new ProcessBuilder(
-                        "netsh", "interface", "ip", "add", "route",
-                        "0.0.0.0/0", "\"" + adapterName + "\"", "10.8.0.1", "metric=1"
-                );
-                Process p2 = pb2.start();
-                int exit2 = p2.waitFor();
-
-                ProcessBuilder pb3 = new ProcessBuilder(
-                        "netsh", "interface", "ip", "add", "route",
-                        "128.0.0.0/1", "\"" + adapterName + "\"", "10.8.0.1", "metric=1"
-                );
-                Process p3 = pb3.start();
-                int exit3 = p3.waitFor();
-
-                if (exit2 == 0 && exit3 == 0) {
-                    log.info("✓ Routes configured (0.0.0.0/1 + 128.0.0.0/1)");
-                    log.info("All internet traffic will now flow through TUN adapter");
-                } else {
-                    log.warn("Failed to add routes (exit codes: {}, {})", exit2, exit3);
-                }
-
-            } catch (IOException | InterruptedException e) {
-                log.error("Failed to configure adapter", e);
-            }
-        }
-    }*/
 
     public static synchronized void fetchDLL() {
         if(fetch_attempt){
@@ -207,7 +107,7 @@ public class WinTunAdapter extends TunAdapter {
 
         String resourcePath = "/wintun/bin/" + archFolder + "/wintun.dll";
 
-        InputStream input = WinTunAdapter.class.getResourceAsStream(resourcePath);
+        InputStream input = WinTunTunnel.class.getResourceAsStream(resourcePath);
 
         if (input == null) {
             logger.error("The WinTun DLL failed to load from resources, we pray it already exists somewhere");
