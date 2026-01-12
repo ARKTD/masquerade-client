@@ -28,10 +28,11 @@ tasks.jar {
     manifest {
         attributes(
             "Main-Class" to "org.masquerade.Main",
-            "Add-Opens" to "java.base/java.lang=ALL-UNNAMED"
+            "Add-Opens" to "java.base/java.lang=ALL-UNNAMED",
+            "Enable-Native-Access" to "ALL-UNNAMED"
         )
     }
-    
+
     from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

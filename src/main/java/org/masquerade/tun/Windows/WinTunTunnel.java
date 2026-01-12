@@ -71,6 +71,13 @@ public class WinTunTunnel extends Tunnel {
         }
     }
 
+    public boolean isRunning(){
+        if(session != null && adapter != null){
+            return true;
+        }
+        return false;
+    }
+
     public void close(){
         if (session != null) {
             WinTun.INSTANCE.WintunEndSession(session);

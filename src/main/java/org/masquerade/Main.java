@@ -21,8 +21,22 @@ public class Main {
             proxy.connect();
         } catch (Exception e) {
             this.logger.error("Proxy failed to start properly.", e);
+            return;
         }
 
         this.logger.info("Proxy started successfully.");
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            this.logger.log("Shutting down Masquerade...");
+            proxy.close();
+            AnsiConsole.systemUninstall();
+        }));
+
+        this.logger.info("The application was started successfully.");
+        try {
+            Thread.currentThread().join();
+        } catch (InterruptedException e) {
+            this.logger.info("Application interrupted.");
+        }
     }
 }

@@ -7,12 +7,16 @@ public class Connection {
     static TunWrapper TUNWrapper = new TunWrapper();
     static Tunnel tunnel = null;
 
-    public void connect(){
+    public void connect() throws Exception {
         if(tunnel != null){
             return;
         }
 
         tunnel = TUNWrapper.init();
+
+        if(!tunnel.isRunning()){
+            throw new Exception("Expected tunnel to be running after initialization.");
+        }
     }
 
     public void close(){
