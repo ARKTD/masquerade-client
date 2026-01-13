@@ -26,6 +26,15 @@ public class Main {
 
         this.logger.info("Proxy started successfully.");
 
+        try{
+            proxy.engage();
+        } catch (Exception e) {
+            this.logger.error("The proxy failed to engage the middleware.", e);
+            return;
+        }
+
+        this.logger.info("Middleware engaged successfully.");
+
         try {
             Thread.currentThread().join();
         } catch (InterruptedException e) {
