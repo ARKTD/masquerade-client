@@ -21,7 +21,7 @@ interface WinTun extends StdCallLibrary {
     Pointer WintunReceivePacket(Pointer session, IntByReference size);
     void WintunReleaseReceivePacket(Pointer session, Pointer packet);
 
-    Pointer WintunAllocateSendPacket(Pointer session, Pointer packet);
+    Pointer WintunAllocateSendPacket(Pointer session, int size);
     void WintunSendPacket(Pointer session, Pointer packet);
     int WintunGetLastError();
 }

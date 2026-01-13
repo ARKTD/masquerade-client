@@ -3,6 +3,7 @@ package org.masquerade.tun.Windows;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import com.sun.jna.WString;
+import com.sun.jna.ptr.IntByReference;
 import org.masquerade.tun.Tunnel;
 import org.masquerade.utils.Logger;
 
@@ -84,6 +85,50 @@ public class WinTunTunnel extends Tunnel {
         }
         if (adapter != null) {
             WinTun.INSTANCE.WintunCloseAdapter(adapter);
+        }
+    }
+
+    public byte[] readPacket() {
+        if (session == null) {
+            return null;
+        }
+
+        IntByReference size = new IntByReference();
+        Pointer packetPointer = WinTun.INSTANCE.WintunReceivePacket(session, size);
+        
+        if (packetPointer == null) {
+            return null;
+        }
+
+        int packetSize = size.getValue();
+        byte[] packet = packetPointer.getByteArray(0, packetSize);
+        
+        WinTun.INSTANCE.WintunReleaseReceivePacket(session, packetPointer);
+        
+        return packet;
+    }
+
+    public boolean writePacket(byte[] packet) {
+        if (session == null || packet == null || packet.length == 0) {
+            return false;
+        }
+
+        try {
+            Pointer packetPointer = WinTun.INSTANCE.WintunAllocateSendPacket(session, packet.length);
+            
+            if (packetPointer == null) {
+                int error = Native.getLastError();
+                logger.error("Failed to allocate send packet", error);
+                return false;
+            }
+
+            packetPointer.write(0, packet, 0, packet.length);
+            WinTun.INSTANCE.WintunSendPacket(session, packetPointer);
+            
+            return true;
+        } catch (Exception e) {
+            logger.error("Error writing packet", e);
+            return false;
         }
     }
 

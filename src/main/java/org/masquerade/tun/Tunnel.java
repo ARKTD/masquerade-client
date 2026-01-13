@@ -14,4 +14,6 @@ public abstract class Tunnel {
     abstract public void init();
     abstract public void close();
     abstract public boolean isRunning();
+    abstract public byte[] readPacket();
+    abstract public boolean writePacket(byte[] packet);
 }
