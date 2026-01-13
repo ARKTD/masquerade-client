@@ -17,7 +17,7 @@ public class Connection {
     public void connect() throws Exception {
         // Logic is simple here: first try to init tunnel if not running yet
         // Tunnel might exist, but middleware might be stopped
-        if (tunnel.isRunning()) {
+        if (tunnel != null && tunnel.isRunning()) {
             return;
         }
         tunnel = TUNWrapper.init();
@@ -42,7 +42,7 @@ public class Connection {
     // Second part of proxy - engage the middleware for processing.
     // aka VPN uses the already-prepared tunnel, routes packets.
     public void engage() throws Exception{
-        if(!tunnel.isRunning()){
+        if(tunnel == null || !tunnel.isRunning()){
             this.connect();
         }
 
